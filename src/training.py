@@ -1,8 +1,9 @@
 import nltk
 import nltk.chunk
 import codecs
-import testing
+import viterbi
 from collections import Counter
+from sklearn.metrics import confusion_matrix
 
 def load_sentences(path):
     sentences = []
@@ -23,7 +24,7 @@ def load_sentences(path):
             sentences.append(sentence)
     return sentences
 
-train='/home/ayushi/github/NLP/dataset/CoNLL-2003/eng _lesser.train'
+train='../dataset/CoNLL-2003/eng.train'
 
 allData=load_sentences(train)
 globalData=[]
@@ -46,6 +47,7 @@ allTags=[a for a in freq_tag]
 allChunck=[a for a in freq_chunck]
 allNe=[a for a in freq_ne]
 #P(NE|Sentence/context)=P(context|NE)*P(NE)
+
 dict1={}
 #P(NEi|NEi-1)
 for i in allNe:
@@ -56,57 +58,137 @@ for i in dict1 :
     totalCount=sum(dict1[i].values());
     for k in dict1[i]:
         dict1[i][k]/=float(totalCount)
-    print (i, ':', dict1[i])
-print('-----------------')
-
+    #print (i, ':', dict1[i])
+   
+print('--------aa---------')
 #P(W|NE)
 dict2={}
-for i,x,y,j in globalData: # i:word j:tag
-    dict2[j]=[a for (a,x,y,b) in globalData if b==j]
-for i in dict2 :
+for i in allNe:
+    dict2[i]=[a for (a,x,y,j) in globalData if j==i]
+for i in dict2:
     dict2[i]=dict(Counter(dict2[i]))
     totalCount=sum(dict2[i].values());
     for k in dict2[i]:
         dict2[i][k]/=float(totalCount)
-    print(i,':',dict2[i])
+        
+print('-------bb----------')
+#P(POSi|POSi-1)
+dict3={}
+for i in allTags:
+    dict3[i]=[b[1] for (a,b) in allbigrams if a[1]==i]   
+for i in dict3 :
+    dict3[i]=dict(Counter(dict3[i]))
+    totalCount=sum(dict3[i].values());
+    for k in dict3[i]:
+        dict3[i][k]/=float(totalCount)
+print('--------cc---------')
+#P(POS|NE)
+dict5={}
+for i in allNe:
+    dict5[i]=[x for (a,x,y,j) in globalData if j==i]
+for i in dict5:
+    dict5[i]=dict(Counter(dict5[i]))
+    totalCount=sum(dict5[i].values());
+    for k in dict5[i]:
+        dict5[i][k]/=float(totalCount)
+print('--------aa---------')
+#P(Chunk|NE)
+dict6={}
+for i in allNe:
+    dict6[i]=[y for (a,x,y,j) in globalData if j==i]
+for i in dict6:
+    dict6[i]=dict(Counter(dict6[i]))
+    totalCount=sum(dict6[i].values());
+    for k in dict6[i]:
+        dict6[i][k]/=float(totalCount)
+
 print('-----------------')
-#P(NE|POS,W)
+#P(POS,W|NE)
+dict4={}
+for i in allNe:
+    dict4[i]=[(a,x) for (a,x,y,j) in globalData if j==i]
+for i in dict4:
+    dict4[i]=dict(Counter(dict4[i]))
+    totalCount=sum(dict4[i].values());
+    for k in dict4[i]:
+        dict4[i][k]/=float(totalCount)
+
 #P(POS|W)=P(W|POS)
 #P(fet|NE)
 
-#Probability of word being starting sentence
-sentencestart={}
+#Probability of Named entity being starting starting NE
+sentencestart=dict(zip(allNe,[1 for x in range(0,len(allNe))]))
 for i in allData:
-    if i[0][0] in sentencestart.keys():
-        sentencestart[i[0][0]]+=1
+    if i[0][3] in sentencestart.keys():
+        sentencestart[i[0][3]]+=1
     else:
-        sentencestart[i[0][0]]=1
-totalCount=len(allWords)
+        sentencestart[i[0][3]]=1
+totalCount=sum(sentencestart.values())
 for i in sentencestart:
     sentencestart[i]/=float(totalCount)
 print('-----------------')
 print("-----testing-------")
-test='/home/ayushi/github/NLP/dataset/CoNLL-2003/eng _lesser.testb '
+test='../dataset/CoNLL-2003/eng.testb'
 allTestData=load_sentences(test)
 
 count=0
+predicted=[]
+tags=[]
 for i in allTestData:
-    sent=[]    
+    sent=[]  
     for j in i:
         j[0]=j[0].encode('utf8')
         sent+=[j[0]]
-    print(sent)
+    #print(sent)
+    tags=nltk.pos_tag(sent)
+    pos=[b for (a,b) in tags]
+    #chunk=nltk.chunk_sents(sent)
     param={}
-    param['states'] = tuple(dict1.keys()) #named-entities
-    param['observations'] = tuple(sent) #word
+
+
+#    param['states'] = tuple(allNe) #named-entities
+#    param['observations'] = tuple(sent) #word
+#    param['start_probability'] = sentencestart #tag
+#    param['transition_probability'] = dict1
+#    param['emission_probability'] = dict2
+
+#    param['states'] = tuple(allNe) #named-entities
+#    param['observations'] = tuple(tags) #word
+#    param['start_probability'] = sentencestart #tag
+#    param['transition_probability'] = dict1
+#    param['emission_probability'] = dict4
+
+
+    param['states'] = tuple(allNe) #named-entities
+    param['observations'] = tuple(pos) #word
     param['start_probability'] = sentencestart #tag
     param['transition_probability'] = dict1
-    param['emission_probability'] = dict2
-    obj= testing.Viterbi(param)   
-    obj.viterbi()    
+    param['emission_probability'] = dict5
+    
+    obj= viterbi.Viterbi(param)   
+    predicted=predicted+[obj.viterbi()[1]]    
     count+=1
-obj=testing.Viterbi(param)
+    
 #obj.efficiency()        
-
-
-
+actual=[]
+for i in allTestData:
+    line=[]
+    for j in i:
+        line=line+[j[3]]
+    actual=actual+[line]    
+x=0;
+correct=0;total=0
+for i in actual:
+    y=0;
+    for j in i:
+        if(j==predicted[x][y]):
+            correct+=1;
+        total+=1
+        y+=1
+    x+=1
+accuracy=((correct+0.0)/total)*100;
+predicted_label=[item for sublist in predicted for item in sublist]
+actual_label=[item for sublist in actual for item in sublist]
+cn=confusion_matrix(actual_label,predicted_label,labels=allNe);
+print(cn)
+print (accuracy)
