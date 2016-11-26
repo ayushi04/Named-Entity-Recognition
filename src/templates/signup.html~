@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Wiki based Named Entity Recognition</title>
+    <link href="http://getbootstrap.com/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="http://getbootstrap.com/examples/jumbotron-narrow/jumbotron-narrow.css" rel="stylesheet">
+  </head>
+ 
+  <body>
+    <div class="container">
+      <div class="header">
+        <nav>
+          <ul class="nav nav-pills pull-right">
+            <li role="presentation" ><a href="main">Home</a></li>
+          </ul>
+        </nav>
+        <h3 class="text-muted">Wiki based Named entity recognition</h3>
+      </div>
+      <div class="jumbotron">
+        <h3>Enter text to be searched from wikipedia</h3>
+        <form class="form-signin" action=""	>
+        <label for="inputName" class="sr-only">Text</label>
+        <input type="name" name="inputName" id="inputName" class="form-control" placeholder="Text to be searched" required autofocus>
+	<br/>        
+	<button id="btnSignUp" type="button">Next</button>
+      </form>
+      </div>
+ 
+       
+ 
+      <footer class="footer">
+        <p>&copy; IIIT Hyderabad 2016</p>
+      </footer>
+ 
+    </div>
+  </body>
+</html>
+
